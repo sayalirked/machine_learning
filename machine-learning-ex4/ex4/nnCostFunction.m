@@ -62,20 +62,42 @@ Theta2_grad = zeros(size(Theta2));
 %               the regularization separately and then add them to Theta1_grad
 %               and Theta2_grad from Part 2.
 %
-a2=sigmoid(X*Theta1(:,2:end)');
+a1 = [ones(m,1) X];
+z2 = a1 * Theta1';
+a2 = [ones(m,1) sigmoid(z2)]; 
+z3 = a2 * Theta2';
+h = sigmoid(z3);
+y = repmat(1:num_labels, m, 1) == repmat(y, 1, num_labels);
 
-% for ii=1:m
-%     for kk=1:num_labels
-        J = -1/m*(trace(y'*log(sigmoid(a2*Theta2(:,2:end)'))) + ...
-            trace((ones(size(y))-y)'*log(1-sigmoid(a2*Theta2(:,2:end)'))));
-%     end
-% end
+J = -1/m * sum( sum(y.*log(h)  + ...
+            (ones(size(y))-y).*log(1-h) ) );%%unregularized
 
+reg = lambda/(2*m) * ( sum(sum(Theta1(:,2:end).^2)) + ...
+            sum(sum(Theta2(:,2:end).^2)) ); %%regularization term
 
-
-
+J = J + reg;%%regularized cost
 % -------------------------------------------------------------
+%%
+% Backpropagation
+for ii = 1:m
+    a1bp = a1(ii,:);
+    z2bp = z2(ii,:);
+    a2bp = a2(ii,:);
+    a3bp = h(ii,:);
+    ybp = y(ii,:);
+    
+    del3 = a3bp - ybp;
+    del2 = Theta2' * del3' .* sigmoidGradient([1; z2bp']);
+    del2 = del2(2:end);
+    
+    Theta1_grad = Theta1_grad + del2 * a1bp;
+    Theta2_grad = Theta2_grad + del3' * a2bp;
+end
 
+Theta2_grad = Theta2_grad ./m + ...
+    lambda/m * [zeros(size(Theta2, 1),1) Theta2(:,2:end)];
+Theta1_grad = Theta1_grad ./m + ...
+    lambda/m * [zeros(size(Theta1, 1),1) Theta1(:,2:end)];
 % =========================================================================
 
 % Unroll gradients
